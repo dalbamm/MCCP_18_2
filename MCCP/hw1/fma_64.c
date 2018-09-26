@@ -40,7 +40,7 @@ int main(void){
 	}
 	end=clock();
 	t=(end-start)/1000000.;
-	printf("[Normal Instructions]\ntime elapsed: %0.4lf(sec)\nflops: %0.4lf(GHz)\n", t, rst1=8*q/t/1000);
+	printf("[Normal Instructions]\ntime elapsed: %0.4lf(sec)\nflops: %0.4lf(Gflops)\n", t, rst1=8*q/t/1000);
 	puts("--------------------------------------------------------");
 //	printf("[0]: %lf\n[1]: %lf\n[2]: %lf\n[3]: %lf\n", d[0], d[1], d[2], d[3]);
 	
@@ -49,7 +49,7 @@ int main(void){
 		calc_avx(&vec1, &vec2, &vec3, &rst);
 	end=clock();
 	t=(end-start)/1000000.;
-	printf("[FMA Instructions]\ntime elapsed: %0.4lf(sec)\nflops: %0.4lf(GHz)\n", t, rst2=8*q/t/1000);
+	printf("[FMA Instructions]\ntime elapsed: %0.4lf(sec)\nflops: %0.4lf(Gflops)\n", t, rst2=8*q/t/1000);
 
 	puts("--------------------------------------------------------");
 	printf("[Increase Rate]: %0.0lf%%\n",(rst2/rst1-1)*100);

@@ -5,7 +5,7 @@
 void calc_avx(const __m256d *x1,
 	const __m256d *x2, const __m256d *x3, __m256d *y) {
 	*y = _mm256_mul_pd(*x1, *x2);
-	*y = _mm256_add_pd(*y, *x3);
+	//*y = _mm256_add_pd(*y, *x3);
 }
 
 int main(void){
@@ -33,10 +33,13 @@ int main(void){
 	start=clock();
 	while(cnt2--)
 	{
+		int max=0;
 		for(k=0;k<4;++k){
-			d[k]=a[k]*b[k];
-			d[k]=c[k]+d[k];
+//			d[k]
+				max+=a[k]*b[k];
+//			d[k]=c[k]+d[k];
 		}
+	//	printf("%d\n", max);
 	}
 	end=clock();
 	t=(end-start)/1000000.;
@@ -46,13 +49,20 @@ int main(void){
 	
 	start=clock();
 	while(cnt--)
+	{	int max=0;
 		calc_avx(&vec1, &vec2, &vec3, &rst);
+		for( k = 0 ; k < 4 ; ++k){
+			max+=rst[k];
+		}
+	//	printf("%d\n", max);
+	}
 	end=clock();
 	t=(end-start)/1000000.;
 	printf("[FMA Instructions]\ntime elapsed: %0.4lf(sec)\nflops: %0.4lf(Gflops)\n", t, rst2=8*q/t/1000);
 
 	puts("--------------------------------------------------------");
 	printf("[Increase Rate]: %0.0lf%%\n",(rst2/rst1-1)*100);
+	//printf("[0]: %lf\n[1]: %lf\n[2]: %lf\n[3]: %lf\n", rst[0], rst[1], rst[2], rst[3]);
 	return 0;
 }
 /*int main(void) {

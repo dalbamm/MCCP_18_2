@@ -54,7 +54,6 @@ public class Client  {
 		// try to connect to the server
 		try {
 			socket = new Socket(server, port);
-			Friendlist = new ArrayList<String>();
 		} 
 		// if it failed not much I can so
 		catch(Exception ec) {
@@ -75,31 +74,31 @@ public class Client  {
 			display("Exception creating new Input/output Streams: " + eIO);
 			return false;
 		}
-
-		// creates the Thread to listen from the server 
-		new ListenFromServer().start();
-		// Send our username to the server this is the only message that we
-		// will send as a String. All other messages will be ChatMessage objects
-		try
-		{
-			sOutput.writeObject(username);
-		}
-		catch (IOException eIO) {
-			display("Exception doing login : " + eIO);
-			disconnect();
-			return false;
-		}
         try
         {
-            Friendlist=(ArrayList<String>)sInput.readObject();
-            for(int i = 0 ; i < Friendlist.size(); ++i){
-                System.out.println("fr: "+Friendlist.get(i));
+            sOutput.writeObject(username);
+        }
+        catch (IOException eIO) {
+            display("Exception doing login : " + eIO);
+            disconnect();
+            return false;
+        }
+        try
+        {
+            if(Friendlist != null) {Friendlist=(ArrayList<String>)sInput.readObject();
+                for(int i = 0 ; i < Friendlist.size(); ++i){
+                    System.out.println("fr: "+Friendlist.get(i));}
             }
         } catch (IOException e) {
             e.printStackTrace();
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
+		// creates the Thread to listen from the server 
+		new ListenFromServer().start();
+		// Send our username to the server this is the only message that we
+		// will send as a String. All other messages will be ChatMessage objects
+
         // success we inform the caller that it worked
 		return true;
 	}

@@ -77,8 +77,11 @@ public class Server {
 				al.add(t);// save it in the ArrayList
                 if(!fl.containsKey(t.username)){
                     fl.put(t.username,new ArrayList<String>());
-                    t.friendlist = fl.get(t.username);
+                    ArrayList<String> tmp = fl.get(t.username);
+                    tmp.add(t.username);
                 }
+                t.friendlist = fl.get(t.username);
+
                 flagforStatusChange=true;
 				t.start();
 			}
@@ -235,6 +238,8 @@ public class Server {
 				display(username + " just connected.");
 				if(fl.containsKey(username))
 				    friendlist = fl.get(username);
+
+				sOutput.writeObject(friendlist);
 			}
 			catch (IOException e) {
 				display("Exception creating new Input/output Streams: " + e);

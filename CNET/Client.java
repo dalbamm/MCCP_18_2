@@ -15,7 +15,8 @@ public class Client  {
 	private ObjectInputStream sInput;		// to read from the socket
 	private ObjectOutputStream sOutput;		// to write on the socket
 	private Socket socket;
-
+    private ArrayList<String> Friendlist;
+    private HashMap<String,String> FriendMessages;
 	// if I use a GUI or not
 	private ClientGUI cg;
 	
@@ -53,6 +54,7 @@ public class Client  {
 		// try to connect to the server
 		try {
 			socket = new Socket(server, port);
+			Friendlist = new ArrayList<String>();
 		} 
 		// if it failed not much I can so
 		catch(Exception ec) {
@@ -62,7 +64,7 @@ public class Client  {
 		
 		String msg = "Connection accepted " + socket.getInetAddress() + ":" + socket.getPort();
 		display(msg);
-	
+
 		/* Creating both Data Stream */
 		try
 		{
@@ -87,7 +89,18 @@ public class Client  {
 			disconnect();
 			return false;
 		}
-		// success we inform the caller that it worked
+        try
+        {
+            Friendlist=(ArrayList<String>)sInput.readObject();
+            for(int i = 0 ; i < Friendlist.size(); ++i){
+                System.out.println("fr: "+Friendlist.get(i));
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        // success we inform the caller that it worked
 		return true;
 	}
 
@@ -228,6 +241,11 @@ public class Client  {
 			while(true) {
 				try {
 					String msg = (String) sInput.readObject();
+					if(msg.length()>=  2 && msg.substring(0,2).equals("f:")) {
+					    String finfo = msg;
+					    Friendlist.add(msg);
+					    FriendMessages.put(msg,"");
+                    }
 					// if console mode print the message and add back the prompt
 					if(cg == null) {
 						System.out.println(msg);

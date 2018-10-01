@@ -16,6 +16,11 @@ public class Server {
 	private static int uniqueId;
 	// an ArrayList to keep the list of the Client
 	private ArrayList<ClientThread> al;
+    // a Hashmap to keep the mapping between client and the list of Friends
+    private HashMap<String,ArrayList<String>> fl=new HashMap<String,ArrayList<String>>();
+    // a Hashmap to store <friend_name, messages>
+    private HashMap<String,String> twoname2messages = new HashMap<String,String>();
+
 	// if I am in a GUI
 //	private ServerGUI sg;
 	// to display time
@@ -24,7 +29,7 @@ public class Server {
 	private int port;
 	// the boolean that will be turned of to stop the server
 	private boolean keepGoing;
-	
+	private boolean flagforStatusChange=false;
 
 	/*
 	 *  server constructor that receive the port to listen to for connection as parameter
@@ -69,7 +74,12 @@ public class Server {
 				if(!keepGoing)
 					break;
 				ClientThread t = new ClientThread(socket);  // make a thread of it
-				al.add(t);									// save it in the ArrayList
+				al.add(t);// save it in the ArrayList
+                if(!fl.containsKey(t.username)){
+                    fl.put(t.username,new ArrayList<String>());
+                    t.friendlist = fl.get(t.username);
+                }
+                flagforStatusChange=true;
 				t.start();
 			}
 			// I was asked to stop
@@ -141,6 +151,7 @@ public class Server {
 			// try to write to the Client if it fails remove it from the list
 			if(!ct.writeMsg(messageLf)) {
 				al.remove(i);
+				flagforStatusChange=true;
 				display("Disconnected Client " + ct.username + " removed from list.");
 			}
 		}
@@ -154,6 +165,7 @@ public class Server {
 			// found it
 			if(ct.id == id) {
 				al.remove(i);
+				flagforStatusChange=true;
 				return;
 			}
 		}
@@ -204,7 +216,8 @@ public class Server {
 		ChatMessage cm;
 		// the date I connect
 		String date;
-
+        ArrayList<String> friendlist;
+        HashMap<String,String> friend2messages;
 		// Constructore
 		ClientThread(Socket socket) {
 			// a unique id
@@ -220,6 +233,8 @@ public class Server {
 				// read the username
 				username = (String) sInput.readObject();
 				display(username + " just connected.");
+				if(fl.containsKey(username))
+				    friendlist = fl.get(username);
 			}
 			catch (IOException e) {
 				display("Exception creating new Input/output Streams: " + e);

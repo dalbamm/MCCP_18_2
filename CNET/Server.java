@@ -16,10 +16,11 @@ public class Server {
 	private static int uniqueId;
 	// an ArrayList to keep the list of the Client
 	private ArrayList<ClientThread> al;
-    // a Hashmap to keep the mapping between client and the list of Friends
-    private HashMap<String,ArrayList<String>> fl=new HashMap<String,ArrayList<String>>();
+    // a Hashmap to keep the mapping between client and the string of Friends
+    private HashMap<String,String> name2friends = new HashMap<String,String>();
     // a Hashmap to store <friend_name, messages>
-    private HashMap<String,String> twoname2messages = new HashMap<String,String>();
+    private HashMap<String,String> nametuple2messages = new HashMap<String,String>();
+
 
 	// if I am in a GUI
 //	private ServerGUI sg;
@@ -75,13 +76,6 @@ public class Server {
 					break;
 				ClientThread t = new ClientThread(socket);  // make a thread of it
 				al.add(t);// save it in the ArrayList
-                if(!fl.containsKey(t.username)){
-                    fl.put(t.username,new ArrayList<String>());
-                    ArrayList<String> tmp = fl.get(t.username);
-                    tmp.add(t.username);
-                }
-                t.friendlist = fl.get(t.username);
-
                 flagforStatusChange=true;
 				t.start();
 			}
@@ -173,7 +167,17 @@ public class Server {
 			}
 		}
 	}
-	
+	public boolean isLogin(String username){
+		return al.contains(username);
+	}
+
+	public ClientThread findThread(String username){
+		for(int i = 0 ; i < al.size() ; ++i){
+			if(al.get(i).username.equals(username))
+				return al.get(i);
+		}
+		return null;
+	}
 	/*
 	 *  To run as a console application just open a console window and: 
 	 * > java Server
@@ -182,7 +186,7 @@ public class Server {
 	 */ 
 	public static void main(String[] args) {
 		// start server on port 1500 unless a PortNumber is specified 
-		int portNumber = 20141;
+		int portNumber = 1500;
 		switch(args.length) {
 			case 1:
 				try {
@@ -220,7 +224,6 @@ public class Server {
 		// the date I connect
 		String date;
         ArrayList<String> friendlist;
-        HashMap<String,String> friend2messages;
 		// Constructore
 		ClientThread(Socket socket) {
 			// a unique id
@@ -236,10 +239,12 @@ public class Server {
 				// read the username
 				username = (String) sInput.readObject();
 				display(username + " just connected.");
-				if(fl.containsKey(username))
-				    friendlist = fl.get(username);
-
-				sOutput.writeObject(friendlist);
+				//sOutput.writeObject("hello");
+				if(!name2friends.containsKey(username)){
+                    name2friends.put(username,"friends: ");
+                }
+				String tmp = name2friends.get(username);
+				if(tmp!=null) sOutput.writeObject(tmp);
 			}
 			catch (IOException e) {
 				display("Exception creating new Input/output Streams: " + e);
@@ -280,6 +285,36 @@ public class Server {
 				case ChatMessage.LOGOUT:
 					display(username + " disconnected with a LOGOUT message.");
 					keepGoing = false;
+					break;
+				case ChatMessage.FRIEND:
+                    display("FRIEND:::"+username + " send the request to " + message);
+                    String receiver = message;
+                    ClientThread T_receiver = null;
+                    for(int i = 0 ; i < al.size() ; ++i){
+                    	if(al.get(i).username.equals(message)){
+                    		T_receiver = al.get(i);
+							T_receiver.writeMsg("MANAGER: Do you agree about being friend with \"" + username +"\"? \nAnswer in y/n." );
+							T_receiver.writeMsg("MANAGER: " );
+							break;
+                    	}
+					}
+
+                    break;
+				case ChatMessage.YESNO:
+					String responder, requestor;
+					display("FRIEND:::"+username + " accepts the request from " + (responder = message.substring(message.indexOf("|")+1)));
+					requestor = username;
+					String friend_resp = name2friends.get(responder);
+					String friend_reqs = name2friends.get(requestor);
+					friend_reqs+=responder;
+					friend_reqs+=requestor;
+
+					ClientThread T_responder = findThread(responder);
+					ClientThread T_requestor = findThread(requestor);
+
+					if(T_responder!=null)	T_responder.writeMsg("Congratulaions! You are now connected with "+requestor+"!");
+					if(T_requestor!=null)	T_responder.writeMsg("Congratulaions! You are now connected with "+responder+"!");
+
 					break;
 				case ChatMessage.WHOISIN:
 					writeMsg("List of the users connected at " + sdf.format(new Date()) + "\n");

@@ -15,7 +15,7 @@ public class Client  {
 	private ObjectInputStream sInput;		// to read from the socket
 	private ObjectOutputStream sOutput;		// to write on the socket
 	private Socket socket;
-    private ArrayList<String> Friendlist;
+    private String friendRawStr="";
     private HashMap<String,String> FriendMessages;
 	// if I use a GUI or not
 	private ClientGUI cg;
@@ -77,25 +77,18 @@ public class Client  {
         try
         {
             sOutput.writeObject(username);
+            friendRawStr = (String)sInput.readObject();
+            System.out.println(friendRawStr);
         }
         catch (IOException eIO) {
             display("Exception doing login : " + eIO);
             disconnect();
             return false;
-        }
-        try
-        {
-            if(Friendlist != null) {Friendlist=(ArrayList<String>)sInput.readObject();
-                for(int i = 0 ; i < Friendlist.size(); ++i){
-                    System.out.println("fr: "+Friendlist.get(i));}
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
-		// creates the Thread to listen from the server 
-		new ListenFromServer().start();
+        // creates the Thread to listen from the server
+		new ListenFromServer(this).start();
 		// Send our username to the server this is the only message that we
 		// will send as a String. All other messages will be ChatMessage objects
 
@@ -168,8 +161,8 @@ public class Client  {
 	 */
 	public static void main(String[] args) {
 		// default values
-		int portNumber = 20141;
-		String serverAddress = "147.46.241.102";
+		int portNumber = 1500;
+		String serverAddress = "localhost";//"147.46.241.102";
 		String userName = "Client1";
 
 		// depending of the number of arguments provided we fall through
@@ -222,6 +215,11 @@ public class Client  {
 			else if(msg.equalsIgnoreCase("WHOISIN")) {
 				client.sendMessage(new ChatMessage(ChatMessage.WHOISIN, ""));				
 			}
+            else if(msg.equalsIgnoreCase("FRIEND")) {
+            	System.out.print("MANAGER: Who do you want to be a friend? > ");
+                client.sendMessage(new ChatMessage(ChatMessage.FRIEND, scan.nextLine()));
+				System.out.println("MANAGER: The answer will be soon..");
+			}
 			else {				// default to ordinary message
 				client.sendMessage(new ChatMessage(ChatMessage.MESSAGE, msg));
 			}
@@ -235,16 +233,15 @@ public class Client  {
 	 * if we have a GUI or simply System.out.println() it in console mode
 	 */
 	class ListenFromServer extends Thread {
-
+		Client client;
+		ListenFromServer(Client client){
+			this.client = client;
+		}
 		public void run() {
 			while(true) {
 				try {
 					String msg = (String) sInput.readObject();
-					if(msg.length()>=  2 && msg.substring(0,2).equals("f:")) {
-					    String finfo = msg;
-					    Friendlist.add(msg);
-					    FriendMessages.put(msg,"");
-                    }
+
 					// if console mode print the message and add back the prompt
 					if(cg == null) {
 						System.out.println(msg);
@@ -253,6 +250,13 @@ public class Client  {
 					else {
 						cg.append(msg);
 					}
+					if(msg.contains("MANAGER:")&&msg.contains("friend with")){
+						String sender = msg.substring(msg.indexOf('\"')+1,msg.lastIndexOf('\"'));
+						Scanner scan= new Scanner(System.in);
+						client.sendMessage(new ChatMessage(ChatMessage.YESNO, scan.nextLine()+"|"+sender));
+						System.out.println("MANAGER: Congratulations! You just have connected with "+ sender);
+					}
+
 				}
 				catch(IOException e) {
 					display("Server has close the connection: " + e);
@@ -266,4 +270,5 @@ public class Client  {
 			}
 		}
 	}
+
 }

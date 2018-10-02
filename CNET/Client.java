@@ -19,12 +19,12 @@ public class Client  {
     private HashMap<String,String> FriendMessages;
 	// if I use a GUI or not
 	private ClientGUI cg;
-	
+
 	// the server, the port and the username
 	private String server, username;
 	private int port;
-
-	/*
+	private static boolean YESNOFLAG = false;
+	private static String YESNOsender;/*
 	 *  Constructor called by console mode
 	 *  server: the server address
 	 *  port: the port number
@@ -204,8 +204,15 @@ public class Client  {
 		while(true) {
 			System.out.print("> ");
 			// read message from user
+
 			String msg = scan.nextLine();
 			// logout if message is LOGOUT
+			if(YESNOFLAG)	{
+				System.out.println("VYNFLAG:valid");
+				client.sendMessage(new ChatMessage(ChatMessage.YESNO, scan.nextLine()+"\""+YESNOsender+"\""));
+				YESNOFLAG = false;
+				continue;
+			}
 			if(msg.equalsIgnoreCase("LOGOUT")) {
 				client.sendMessage(new ChatMessage(ChatMessage.LOGOUT, ""));
 				// break to do the disconnect
@@ -251,10 +258,8 @@ public class Client  {
 						cg.append(msg);
 					}
 					if(msg.contains("MANAGER:")&&msg.contains("friend with")){
-						String sender = msg.substring(msg.indexOf('\"')+1,msg.lastIndexOf('\"'));
-						Scanner scan= new Scanner(System.in);
-						client.sendMessage(new ChatMessage(ChatMessage.YESNO, scan.nextLine()+"|"+sender));
-						System.out.println("MANAGER: Congratulations! You just have connected with "+ sender);
+						YESNOFLAG=true;
+						YESNOsender = msg.substring(msg.indexOf('\"')+1,msg.lastIndexOf('\"'));
 					}
 
 				}

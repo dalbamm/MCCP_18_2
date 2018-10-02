@@ -294,15 +294,13 @@ public class Server {
                     	if(al.get(i).username.equals(message)){
                     		T_receiver = al.get(i);
 							T_receiver.writeMsg("MANAGER: Do you agree about being friend with \"" + username +"\"? \nAnswer in y/n." );
-							T_receiver.writeMsg("MANAGER: " );
 							break;
                     	}
 					}
-
                     break;
 				case ChatMessage.YESNO:
 					String responder, requestor;
-					display("FRIEND:::"+username + " accepts the request from " + (responder = message.substring(message.indexOf("|")+1)));
+					display("FRIEND:::"+username + " accepts the request from " + (responder = message.substring(message.indexOf("\"")+1)));
 					requestor = username;
 					String friend_resp = name2friends.get(responder);
 					String friend_reqs = name2friends.get(requestor);

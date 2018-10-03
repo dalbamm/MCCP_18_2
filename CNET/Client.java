@@ -16,7 +16,8 @@ public class Client  {
 	private ObjectOutputStream sOutput;		// to write on the socket
 	private Socket socket;
     private String friendRawStr="";
-    private HashMap<String,String> FriendMessages;
+	private String friendLoginStr="";
+	private HashMap<String,String> FriendMessages;
 	// if I use a GUI or not
 	private ClientGUI cg;
 
@@ -24,7 +25,9 @@ public class Client  {
 	private String server, username;
 	private int port;
 	private static boolean YESNOFLAG = false;
-	private static String YESNOsender;/*
+	private static String YESNOsender;
+	private String friend_status;
+	/*
 	 *  Constructor called by console mode
 	 *  server: the server address
 	 *  port: the port number
@@ -79,7 +82,9 @@ public class Client  {
             sOutput.writeObject(username);
             friendRawStr = (String)sInput.readObject();
             System.out.println(friendRawStr);
-        }
+			friendLoginStr = (String)sInput.readObject();
+			System.out.println(friendLoginStr);
+		}
         catch (IOException eIO) {
             display("Exception doing login : " + eIO);
             disconnect();
@@ -204,16 +209,17 @@ public class Client  {
 		while(true) {
 			System.out.print("> ");
 			// read message from user
-
+			//System.out.println("DBG:::scan-1");
 			String msg = scan.nextLine();
+			//System.out.println("DBG:::scan+1");
 			// logout if message is LOGOUT
+			//System.out.println(YESNOFLAG);
 			if(YESNOFLAG)	{
-				System.out.println("VYNFLAG:valid");
-				client.sendMessage(new ChatMessage(ChatMessage.YESNO, scan.nextLine()+"\""+YESNOsender+"\""));
+				//System.out.println("VYNFLAG:valid");
 				YESNOFLAG = false;
-				continue;
+				client.sendMessage(new ChatMessage(ChatMessage.YESNO, msg+"\""+YESNOsender+"\""));
 			}
-			if(msg.equalsIgnoreCase("LOGOUT")) {
+			else if(msg.equalsIgnoreCase("LOGOUT")) {
 				client.sendMessage(new ChatMessage(ChatMessage.LOGOUT, ""));
 				// break to do the disconnect
 				break;
@@ -248,7 +254,13 @@ public class Client  {
 			while(true) {
 				try {
 					String msg = (String) sInput.readObject();
-
+					if(msg.contains("MANAGER: Do you agree to be friend with \"")){
+						YESNOFLAG=true;
+						YESNOsender = msg.substring(msg.indexOf('\"')+1,msg.lastIndexOf('\"'));
+						//client.sendMessage(new ChatMessage(ChatMessage.YESNO, msg+"\""+YESNOsender+"\""));
+						//YESNOFLAG = false;
+						//			client.sendMessage(new ChatMessage(ChatMessage.YESNO, msg+"\""+YESNOsender+"\""));
+					}
 					// if console mode print the message and add back the prompt
 					if(cg == null) {
 						System.out.println(msg);
@@ -257,9 +269,12 @@ public class Client  {
 					else {
 						cg.append(msg);
 					}
-					if(msg.contains("MANAGER:")&&msg.contains("friend with")){
+					if(msg.contains("MANAGER: Do you agree to be friend with \"")){
 						YESNOFLAG=true;
 						YESNOsender = msg.substring(msg.indexOf('\"')+1,msg.lastIndexOf('\"'));
+						//client.sendMessage(new ChatMessage(ChatMessage.YESNO, msg+"\""+YESNOsender+"\""));
+						//YESNOFLAG = false;
+			//			client.sendMessage(new ChatMessage(ChatMessage.YESNO, msg+"\""+YESNOsender+"\""));
 					}
 
 				}

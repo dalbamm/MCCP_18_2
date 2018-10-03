@@ -3,6 +3,8 @@
 https://www.dreamincode.net/forums/topic/259777-a-simple-chat-program-with-clientserver-gui-optional/
 
 */
+import com.sun.org.apache.xml.internal.security.Init;
+
 import java.io.*;
 import java.net.*;
 import java.text.SimpleDateFormat;
@@ -17,7 +19,7 @@ public class Server {
 	// an ArrayList to keep the list of the Client
 	private ArrayList<ClientThread> al;
     // a Hashmap to keep the mapping between client and the string of Friends
-    private HashMap<String,String> name2friends = new HashMap<String,String>();
+    private HashMap<String,ArrayList<String>> name2friends = new HashMap<String,ArrayList<String>>();
     // a Hashmap to store <friend_name, messages>
     private HashMap<String,String> nametuple2messages = new HashMap<String,String>();
 
@@ -31,6 +33,7 @@ public class Server {
 	// the boolean that will be turned of to stop the server
 	private boolean keepGoing;
 	private boolean flagforStatusChange=false;
+	private String recentUser="";
 
 	/*
 	 *  server constructor that receive the port to listen to for connection as parameter
@@ -76,7 +79,8 @@ public class Server {
 					break;
 				ClientThread t = new ClientThread(socket);  // make a thread of it
 				al.add(t);// save it in the ArrayList
-                flagforStatusChange=true;
+				//TODO: Update friend list
+				updateLogonStatus(t.username);
 				t.start();
 			}
 			// I was asked to stop
@@ -103,6 +107,7 @@ public class Server {
             String msg = sdf.format(new Date()) + " Exception on new ServerSocket: " + e + "\n";
 			display(msg);
 		}
+
 	}		
     /*
      * For the GUI to stop the server
@@ -145,10 +150,12 @@ public class Server {
 		// because it has disconnected
 		for(int i = al.size(); --i >= 0;) {
 			ClientThread ct = al.get(i);
+			String changename = ct.username;
 			// try to write to the Client if it fails remove it from the list
 			if(!ct.writeMsg(messageLf)) {
 				al.remove(i);
-				flagforStatusChange=true;
+				updateLogonStatus(changename);
+				//TODO: Update friend list
 				display("Disconnected Client " + ct.username + " removed from list.");
 			}
 		}
@@ -159,16 +166,18 @@ public class Server {
 		// scan the array list until we found the Id
 		for(int i = 0; i < al.size(); ++i) {
 			ClientThread ct = al.get(i);
+			String changename=ct.username;
 			// found it
 			if(ct.id == id) {
 				al.remove(i);
-				flagforStatusChange=true;
+				updateLogonStatus(changename);
+				//TODO: Update friend list
 				return;
 			}
 		}
 	}
 	public boolean isLogin(String username){
-		return al.contains(username);
+		return findThread(username)!=null;
 	}
 
 	public ClientThread findThread(String username){
@@ -177,6 +186,42 @@ public class Server {
 				return al.get(i);
 		}
 		return null;
+	}
+	public void AddFriend(String friend1, String friend2){
+		name2friends.get(friend1).add(friend2);
+		name2friends.get(friend2).add(friend1);
+	}
+
+	public String CheckLoginFriends(String username){
+		int len = name2friends.get(username).size();
+		String[] rawlist=new String[len];
+		name2friends.get(username).toArray(rawlist);
+		String rst="/";
+		for(int i = 0 ; i < rawlist.length; ++i){
+			String tmp = rawlist[i];
+			if(isLogin(tmp))	rst+=tmp+": ON/";
+			else rst+=tmp+": OFF/";
+		}
+		return rst;
+	}
+	public String ArraytoString(ArrayList<String> list){
+		String rst="";
+		for(int i = 0 ; i < list.size(); ++i){
+			rst += " "+list.get(i);
+		}
+		return rst.equals("") ? rst : rst.substring(1);
+	}
+
+	public void updateLogonStatus(String changeuser){
+		ArrayList<String> tmp = name2friends.get(changeuser);
+		for(int i = 0 ; i < tmp.size() ; ++i){
+			ClientThread ct;
+			ct = findThread(tmp.get(i));
+			if(ct!=null) {
+				ct.friend_status = CheckLoginFriends(ct.username);
+				ct.writeMsg("\""+changeuser+"\"\'s status is changed: " + ct.friend_status);
+			}
+		}
 	}
 	/*
 	 *  To run as a console application just open a console window and: 
@@ -224,6 +269,9 @@ public class Server {
 		// the date I connect
 		String date;
         ArrayList<String> friendlist;
+        String friend_status="";
+        Boolean flagforupfriend_listen;
+		Boolean flagforupfriend_write;
 		// Constructore
 		ClientThread(Socket socket) {
 			// a unique id
@@ -241,10 +289,13 @@ public class Server {
 				display(username + " just connected.");
 				//sOutput.writeObject("hello");
 				if(!name2friends.containsKey(username)){
-                    name2friends.put(username,"friends: ");
+                    name2friends.put(username,new ArrayList<String>());
                 }
-				String tmp = name2friends.get(username);
-				if(tmp!=null) sOutput.writeObject(tmp);
+                //name2friends.replace(username,name2friends.get(username)+" blahblah~!~!~!");
+				String tmp = ArraytoString(name2friends.get(username));
+				sOutput.writeObject("Friend: "+tmp);
+				friend_status = CheckLoginFriends(username);
+				sOutput.writeObject("Log on: "+friend_status);
 			}
 			catch (IOException e) {
 				display("Exception creating new Input/output Streams: " + e);
@@ -258,11 +309,12 @@ public class Server {
 		}
 
 		// what will run forever
-		public void run() {
+		public void run() {int cnt=0;
 			// to loop until LOGOUT
 			boolean keepGoing = true;
 			while(keepGoing) {
 				// read a String (which is an object)
+				//System.out.println(cnt++);
 				try {
 					cm = (ChatMessage) sInput.readObject();
 				}
@@ -289,30 +341,39 @@ public class Server {
 				case ChatMessage.FRIEND:
                     display("FRIEND:::"+username + " send the request to " + message);
                     String receiver = message;
-                    ClientThread T_receiver = null;
-                    for(int i = 0 ; i < al.size() ; ++i){
-                    	if(al.get(i).username.equals(message)){
-                    		T_receiver = al.get(i);
-							T_receiver.writeMsg("MANAGER: Do you agree about being friend with \"" + username +"\"? \nAnswer in y/n." );
+                    ClientThread T_receiver = findThread(receiver);
+                    	if(T_receiver != null){
+                    		T_receiver.writeMsg("MANAGER: Do you agree to be friend with \"" + username +"\"?"+
+									" If you agree, just type one letter \'y\', or considered as rejection.");
 							break;
                     	}
-					}
-                    break;
+                    	//todo: T_receiver==null when receiver is offline. -> memo it
+					break;
 				case ChatMessage.YESNO:
 					String responder, requestor;
-					display("FRIEND:::"+username + " accepts the request from " + (responder = message.substring(message.indexOf("\"")+1)));
-					requestor = username;
-					String friend_resp = name2friends.get(responder);
-					String friend_reqs = name2friends.get(requestor);
-					friend_reqs+=responder;
-					friend_reqs+=requestor;
+					responder = username;
+					requestor = message.substring(message.indexOf("\"")+1,message.lastIndexOf("\""));
+
 
 					ClientThread T_responder = findThread(responder);
 					ClientThread T_requestor = findThread(requestor);
 
-					if(T_responder!=null)	T_responder.writeMsg("Congratulaions! You are now connected with "+requestor+"!");
-					if(T_requestor!=null)	T_responder.writeMsg("Congratulaions! You are now connected with "+responder+"!");
+					if(message.charAt(0)=='y') {
+						display("FRIEND:::"+responder + " accepts the request from " + requestor);
+						AddFriend(responder, requestor);
 
+
+						if (T_responder != null)
+							T_responder.writeMsg("MANAGER: Congratulaions! You are now friend with \"" + requestor + "\"!");
+						if (T_requestor != null)
+							T_requestor.writeMsg("MANAGER: Congratulaions! You are now friend with \"" + responder + "\"!");
+
+					}
+					else{
+						display("FRIEND:::"+responder + " rejects the request from " + requestor);
+						T_responder.writeMsg("MANAGER: OK, I will send rejection message to \"" + requestor + "\"!");
+						T_requestor.writeMsg("MANAGER: Sorry, \"" + responder + "\" reject your request..");
+					}
 					break;
 				case ChatMessage.WHOISIN:
 					writeMsg("List of the users connected at " + sdf.format(new Date()) + "\n");

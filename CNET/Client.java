@@ -209,13 +209,9 @@ public class Client  {
 		while(true) {
 			System.out.print("> ");
 			// read message from user
-			//System.out.println("DBG:::scan-1");
 			String msg = scan.nextLine();
-			//System.out.println("DBG:::scan+1");
 			// logout if message is LOGOUT
-			//System.out.println(YESNOFLAG);
 			if(YESNOFLAG)	{
-				//System.out.println("VYNFLAG:valid");
 				YESNOFLAG = false;
 				client.sendMessage(new ChatMessage(ChatMessage.YESNO, msg+"\""+YESNOsender+"\""));
 			}
@@ -232,6 +228,9 @@ public class Client  {
             	System.out.print("MANAGER: Who do you want to be a friend? > ");
                 client.sendMessage(new ChatMessage(ChatMessage.FRIEND, scan.nextLine()));
 				System.out.println("MANAGER: The answer will be soon..");
+			}
+			else if(msg.contains("<")){
+				client.sendMessage(new ChatMessage(ChatMessage.pMESSAGE, msg+"<"+userName));
 			}
 			else {				// default to ordinary message
 				client.sendMessage(new ChatMessage(ChatMessage.MESSAGE, msg));
@@ -257,9 +256,6 @@ public class Client  {
 					if(msg.contains("MANAGER: Do you agree to be friend with \"")){
 						YESNOFLAG=true;
 						YESNOsender = msg.substring(msg.indexOf('\"')+1,msg.lastIndexOf('\"'));
-						//client.sendMessage(new ChatMessage(ChatMessage.YESNO, msg+"\""+YESNOsender+"\""));
-						//YESNOFLAG = false;
-						//			client.sendMessage(new ChatMessage(ChatMessage.YESNO, msg+"\""+YESNOsender+"\""));
 					}
 					// if console mode print the message and add back the prompt
 					if(cg == null) {
@@ -269,14 +265,11 @@ public class Client  {
 					else {
 						cg.append(msg);
 					}
-					if(msg.contains("MANAGER: Do you agree to be friend with \"")){
+				/*	if(msg.contains("MANAGER: Do you agree to be friend with \"")){
 						YESNOFLAG=true;
 						YESNOsender = msg.substring(msg.indexOf('\"')+1,msg.lastIndexOf('\"'));
-						//client.sendMessage(new ChatMessage(ChatMessage.YESNO, msg+"\""+YESNOsender+"\""));
-						//YESNOFLAG = false;
-			//			client.sendMessage(new ChatMessage(ChatMessage.YESNO, msg+"\""+YESNOsender+"\""));
 					}
-
+*/
 				}
 				catch(IOException e) {
 					display("Server has close the connection: " + e);

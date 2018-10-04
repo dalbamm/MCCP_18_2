@@ -3,7 +3,6 @@
 https://www.dreamincode.net/forums/topic/259777-a-simple-chat-program-with-clientserver-gui-optional/
 
 */
-import com.sun.org.apache.xml.internal.security.Init;
 
 import java.io.*;
 import java.net.*;
@@ -21,20 +20,14 @@ public class Server {
     // a Hashmap to keep the mapping between client and the string of Friends
     private HashMap<String,ArrayList<String>> name2friends = new HashMap<String,ArrayList<String>>();
     // a Hashmap to store <friend_name, messages>
+	//todo: You should write the code to store message logs.
     private HashMap<String,String> nametuple2messages = new HashMap<String,String>();
-
-
-	// if I am in a GUI
-//	private ServerGUI sg;
-	// to display time
+    // to display time
 	private SimpleDateFormat sdf;
 	// the port number to listen for connection
 	private int port;
 	// the boolean that will be turned of to stop the server
 	private boolean keepGoing;
-	private boolean flagforStatusChange=false;
-	private String recentUser="";
-
 	/*
 	 *  server constructor that receive the port to listen to for connection as parameter
 	 *  in console
@@ -47,18 +40,7 @@ public class Server {
         al = new ArrayList<ClientThread>();
 		//this(port, null);
 	}
-	
-/*	public Server(int port, ServerGUI sg) {
-		// GUI or not
-//		this.sg = sg;
-		// the port
-		this.port = port;
-		// to display hh:mm:ss
-		sdf = new SimpleDateFormat("HH:mm:ss");
-		// ArrayList for the Client list
-		al = new ArrayList<ClientThread>();
-	}
-*/
+
 	public void start() {
 		keepGoing = true;
 		/* create socket server and wait for connection requests */
@@ -79,7 +61,6 @@ public class Server {
 					break;
 				ClientThread t = new ClientThread(socket);  // make a thread of it
 				al.add(t);// save it in the ArrayList
-				//TODO: Update friend list
 				updateLogonStatus(t.username);
 				t.start();
 			}
@@ -128,24 +109,43 @@ public class Server {
 	 */
 	private void display(String msg) {
 		String time = sdf.format(new Date()) + " " + msg;
-		//if(sg == null)
 			System.out.println(time);
-		//else
-		//	sg.appendEvent(time + "\n");
+
 	}
 	/*
-	 *  to broadcast a message to all Clients
+	 *  to broadcast a message to specific client
 	 */
+	private synchronized void pbroadcast(String message, String receiver, String sender) {
+		// add HH:mm:ss and \n to the message
+		String time = sdf.format(new Date());
+		String messageLf = message + "\n";
+		// display message on console
+		String messageLf2 = time + " " +sender+ "> "+ message + "\n";
+		System.out.print(time+" " + sender+"->"+receiver+" :"+messageLf);
+		ClientThread ct = findThread(receiver);
+		// try to write to the Client if it fails remove it from the list
+		if(ct==null) ;
+		else if(!ct.writeMsg(messageLf2)) {
+			al.remove(ct);
+			updateLogonStatus(receiver);
+			display("Disconnected Client " + ct.username + " removed from list.");
+		}
+		//todo: receiver logout status -> message log remaining impl. needed
+		String logname = arrangeAlpha(receiver,sender);
+		if(!nametuple2messages.containsKey(logname))
+			nametuple2messages.put(logname,"");
+		String log = nametuple2messages.get(logname);
+		log += messageLf2;
+		nametuple2messages.replace(logname,log);
+		System.out.println("DBG:::"+nametuple2messages.get(logname));
+	}
+
 	private synchronized void broadcast(String message) {
 		// add HH:mm:ss and \n to the message
 		String time = sdf.format(new Date());
 		String messageLf = time + " " + message + "\n";
-		// display message on console or GUI
-		//if(sg == null)
+
 			System.out.print(messageLf);
-		//else
-		//	sg.appendRoom(messageLf);     // append in the room window
-		
 		// we loop in reverse order in case we would have to remove a Client
 		// because it has disconnected
 		for(int i = al.size(); --i >= 0;) {
@@ -155,12 +155,10 @@ public class Server {
 			if(!ct.writeMsg(messageLf)) {
 				al.remove(i);
 				updateLogonStatus(changename);
-				//TODO: Update friend list
 				display("Disconnected Client " + ct.username + " removed from list.");
 			}
 		}
 	}
-
 	// for a client who logoff using the LOGOUT message
 	synchronized void remove(int id) {
 		// scan the array list until we found the Id
@@ -171,7 +169,6 @@ public class Server {
 			if(ct.id == id) {
 				al.remove(i);
 				updateLogonStatus(changename);
-				//TODO: Update friend list
 				return;
 			}
 		}
@@ -220,9 +217,31 @@ public class Server {
 			if(ct!=null) {
 				ct.friend_status = CheckLoginFriends(ct.username);
 				ct.writeMsg("\""+changeuser+"\"\'s status is changed: " + ct.friend_status);
+				updateDialog(changeuser,ct.username) ;
 			}
+
 		}
 	}
+	public void updateHashMap(String key, String added){
+		if(!nametuple2messages.containsKey(key))	nametuple2messages.put(key,"");
+		String tmp = nametuple2messages.get(key);
+		tmp+=added;
+		nametuple2messages.replace(key,tmp);
+	}
+	public void updateDialog(String offliner, String counter){
+		if(isLogin(offliner))	return;
+		String logfilename=arrangeAlpha(offliner,counter);
+		String checkpoint = "==="+offliner+"===";
+		String tmp =nametuple2messages.get(logfilename);
+		tmp=tmp.replace(checkpoint,"");
+		nametuple2messages.replace(logfilename,tmp+checkpoint);
+			//for(int i = 0 ; i < name2friends.get(offliner).size();++i){
+		//}
+	}
+	private String arrangeAlpha(String sub1, String sub2){
+		return sub1.compareTo(sub2)>0? sub2+"_"+sub1 : sub1+"_"+sub2;
+	}
+	//fixme ^- add methods
 	/*
 	 *  To run as a console application just open a console window and: 
 	 * > java Server
@@ -269,9 +288,8 @@ public class Server {
 		// the date I connect
 		String date;
         ArrayList<String> friendlist;
-        String friend_status="";
-        Boolean flagforupfriend_listen;
-		Boolean flagforupfriend_write;
+		String friend_status="";
+		String friendlistStr="";
 		// Constructore
 		ClientThread(Socket socket) {
 			// a unique id
@@ -292,10 +310,10 @@ public class Server {
                     name2friends.put(username,new ArrayList<String>());
                 }
                 //name2friends.replace(username,name2friends.get(username)+" blahblah~!~!~!");
-				String tmp = ArraytoString(name2friends.get(username));
-				sOutput.writeObject("Friend: "+tmp);
+				friendlistStr = ArraytoString(name2friends.get(username));
+				sOutput.writeObject("MANAGER: Your Friends../"+friendlistStr);
 				friend_status = CheckLoginFriends(username);
-				sOutput.writeObject("Log on: "+friend_status);
+				sOutput.writeObject("MANAGER: Log on.."+friend_status);
 			}
 			catch (IOException e) {
 				display("Exception creating new Input/output Streams: " + e);
@@ -330,6 +348,15 @@ public class Server {
 
 				// Switch on the type of message receive
 				switch(cm.getType()) {
+				//todo: complete below pMessage(private) .
+					// You may implement branch version of broadcast method.
+					case ChatMessage.pMESSAGE:
+						String [] tmp_list = message.split("<");
+						String tmp_send = tmp_list[2];
+						String tmp_receiv = tmp_list[1];
+						String msg = tmp_list[0];
+					pbroadcast(msg,tmp_receiv,tmp_send);
+					break;
 
 				case ChatMessage.MESSAGE:
 					broadcast(username + ": " + message);
@@ -375,13 +402,18 @@ public class Server {
 						T_requestor.writeMsg("MANAGER: Sorry, \"" + responder + "\" reject your request..");
 					}
 					break;
-				case ChatMessage.WHOISIN:
-					writeMsg("List of the users connected at " + sdf.format(new Date()) + "\n");
+					//todo: You should configure the code to show status of only friends, not of all users.
+					case ChatMessage.WHOISIN:
+					writeMsg("List of the friends connected at " + sdf.format(new Date()) + "\n");
 					// scan al the users connected
-					for(int i = 0; i < al.size(); ++i) {
-						ClientThread ct = al.get(i);
-						writeMsg((i+1) + ") " + ct.username + " since " + ct.date);
-					}
+						cnt=0;
+						friendlist = name2friends.get(username);
+						for(int i = 0; i < friendlist.size(); ++i) {
+							String friendcheck=friendlist.get(i);
+							ClientThread ct = findThread(friendcheck);
+							if(ct==null)	continue;
+							writeMsg((++cnt) + ") " + ct.username + " since " + ct.date);
+						}
 					break;
 				}
 			}

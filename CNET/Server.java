@@ -28,6 +28,7 @@ public class Server {
 	private int port;
 	// the boolean that will be turned of to stop the server
 	private boolean keepGoing;
+	public ArrayList<String> OfflineFriendRequest=new ArrayList<String>();
 	/*
 	 *  server constructor that receive the port to listen to for connection as parameter
 	 *  in console
@@ -63,6 +64,17 @@ public class Server {
 				al.add(t);// save it in the ArrayList
 				updateLogonStatus(t.username);
 				t.start();
+				int max = OfflineFriendRequest.size();
+				for(int i = 0 ; i < max ; ++i){
+					String q = OfflineFriendRequest.get(i);
+					if(q.contains(t.username+"<"))
+					{
+						t.writeMsg("MANAGER: Do you agree to be a friend with \"" + q.substring(q.indexOf("<")+1) +"\"?\n"+
+							" If you agree, click \'Accept\' button below. \nIf not, click \'Reject\' button.");
+						OfflineFriendRequest.remove(i--);
+						max--;
+					}
+				}
 			}
 			// I was asked to stop
 			try {
@@ -120,12 +132,14 @@ public class Server {
 		String time = sdf.format(new Date());
 		String messageLf = message + "\n";
 		// display message on console
-		String messageLf2 = time + " " +sender+ "> "+ message + "\n";
-		System.out.print(time+" " + sender+"->"+receiver+" :"+messageLf);
+		String messageLf2 = time + " " +sender+ "> "+ message + "\n"+">"+receiver;
+		String messageLf3;
+		System.out.print(messageLf3 = time+" " + sender+"->"+receiver+" :"+messageLf);
 		ClientThread ct = findThread(receiver);
 		// try to write to the Client if it fails remove it from the list
+		findThread(sender).writeMsg("private|||"+messageLf2);
 		if(ct==null) ;
-		else if(!ct.writeMsg(messageLf2)) {
+		else if(!ct.writeMsg("private|||"+messageLf2)) {
 			al.remove(ct);
 			updateLogonStatus(receiver);
 			display("Disconnected Client " + ct.username + " removed from list.");
@@ -135,7 +149,7 @@ public class Server {
 		if(!nametuple2messages.containsKey(logname))
 			nametuple2messages.put(logname,"");
 		String log = nametuple2messages.get(logname);
-		log += messageLf2;
+		log += messageLf2.substring(0,messageLf2.indexOf('\n')+1);
 		nametuple2messages.replace(logname,log);
 		System.out.println("DBG:::"+nametuple2messages.get(logname));
 	}
@@ -233,8 +247,13 @@ public class Server {
 		String logfilename=arrangeAlpha(offliner,counter);
 		String checkpoint = "==="+offliner+"===";
 		String tmp =nametuple2messages.get(logfilename);
-		tmp=tmp.replace(checkpoint,"");
-		nametuple2messages.replace(logfilename,tmp+checkpoint);
+		//System.out.println(tmp==null + tmp);
+		if(tmp != null && tmp.length()>0)
+		{
+			while(tmp.contains(checkpoint))
+				tmp=tmp.substring(0,tmp.indexOf(checkpoint))+tmp.substring(tmp.indexOf(checkpoint)+checkpoint.length());
+		}
+		nametuple2messages.replace(logfilename,tmp+checkpoint+'\n');
 			//for(int i = 0 ; i < name2friends.get(offliner).size();++i){
 		//}
 	}
@@ -369,18 +388,31 @@ public class Server {
                     display("FRIEND:::"+username + " send the request to " + message);
                     String receiver = message;
                     ClientThread T_receiver = findThread(receiver);
-                    	if(T_receiver != null){
-                    		T_receiver.writeMsg("MANAGER: Do you agree to be friend with \"" + username +"\"?"+
-									" If you agree, just type one letter \'y\', or considered as rejection.");
-							break;
-                    	}
-                    	//todo: T_receiver==null when receiver is offline. -> memo it
+					if(T_receiver != null){
+						T_receiver.writeMsg("MANAGER: Do you agree to be a friend with \"" + username +"\"?\n"+
+								" If you agree, click \'Accept\' button below. \nIf not, click \'Reject\' button.");
+						break;
+					}
+					//todo: T_receiver==null when receiver is offline. -> memo it
+					else{
+							OfflineFriendRequest.add(receiver+"<"+username);
+						}
 					break;
 				case ChatMessage.YESNO:
+					if(message.contains("isfriend?")){
+						String nm_q = message.substring(9,message.lastIndexOf("?"));
+						String nm_self = message.substring(message.lastIndexOf("?")+1);
+						ClientThread T = findThread(nm_self);
+						//System.out.println(nm_q+"|"+nm_self);
+						if(name2friends.get(nm_self).contains(nm_q)) T.writeMsg("isfriend?yes");
+						else T.writeMsg("isfriend?no");
+						T.writeMsg("chatlog|||"+nametuple2messages.get(arrangeAlpha(nm_q,nm_self)));
+						break;
+					}
 					String responder, requestor;
 					responder = username;
 					requestor = message.substring(message.indexOf("\"")+1,message.lastIndexOf("\""));
-
+					System.out.println(requestor);
 
 					ClientThread T_responder = findThread(responder);
 					ClientThread T_requestor = findThread(requestor);
@@ -390,11 +422,12 @@ public class Server {
 						AddFriend(responder, requestor);
 
 
-						if (T_responder != null)
+						if (T_responder != null) {
 							T_responder.writeMsg("MANAGER: Congratulaions! You are now friend with \"" + requestor + "\"!");
-						if (T_requestor != null)
+						}
+						if (T_requestor != null) {
 							T_requestor.writeMsg("MANAGER: Congratulaions! You are now friend with \"" + responder + "\"!");
-
+						}
 					}
 					else{
 						display("FRIEND:::"+responder + " rejects the request from " + requestor);

@@ -15,9 +15,9 @@ public class Client  {
 	private ObjectInputStream sInput;		// to read from the socket
 	private ObjectOutputStream sOutput;		// to write on the socket
 	private Socket socket;
-    private String friendRawStr="";
-	private String friendLoginStr="";
-	private HashMap<String,String> FriendMessages;
+    public String friendRawStr="";
+	public String friendLoginStr="";
+	public HashMap<String,String> FriendMessages;
 	// if I use a GUI or not
 	private ClientGUI cg;
 
@@ -80,10 +80,16 @@ public class Client  {
         try
         {
             sOutput.writeObject(username);
+
             friendRawStr = (String)sInput.readObject();
             System.out.println(friendRawStr);
+            display(friendRawStr);
+            cg.friendlist = friendRawStr;
+
 			friendLoginStr = (String)sInput.readObject();
 			System.out.println(friendLoginStr);
+			display(friendLoginStr);
+			cg.friendLoginStr = friendLoginStr;
 		}
         catch (IOException eIO) {
             display("Exception doing login : " + eIO);
@@ -211,9 +217,12 @@ public class Client  {
 			// read message from user
 			String msg = scan.nextLine();
 			// logout if message is LOGOUT
-			if(YESNOFLAG)	{
+			if(YESNOFLAG && client.cg==null)	{
 				YESNOFLAG = false;
 				client.sendMessage(new ChatMessage(ChatMessage.YESNO, msg+"\""+YESNOsender+"\""));
+			}
+			else if(YESNOFLAG)	{
+				YESNOFLAG = false;
 			}
 			else if(msg.equalsIgnoreCase("LOGOUT")) {
 				client.sendMessage(new ChatMessage(ChatMessage.LOGOUT, ""));
@@ -226,6 +235,7 @@ public class Client  {
 			}
             else if(msg.equalsIgnoreCase("FRIEND")) {
             	System.out.print("MANAGER: Who do you want to be a friend? > ");
+				//display("MANAGER: Who do you want to be a friend? > ");
                 client.sendMessage(new ChatMessage(ChatMessage.FRIEND, scan.nextLine()));
 				System.out.println("MANAGER: The answer will be soon..");
 			}
@@ -253,23 +263,54 @@ public class Client  {
 			while(true) {
 				try {
 					String msg = (String) sInput.readObject();
-					if(msg.contains("MANAGER: Do you agree to be friend with \"")){
-						YESNOFLAG=true;
-						YESNOsender = msg.substring(msg.indexOf('\"')+1,msg.lastIndexOf('\"'));
+					//if(msg.contains("MANAGER"))
+					{
+						if (msg.contains("MANAGER: Do you agree to be a friend with \"")) {
+							YESNOFLAG = true;
+							YESNOsender = msg.substring(msg.indexOf('\"') + 1, msg.lastIndexOf('\"'));
+							cg.YESNOFLAG = true;
+							cg.YESNOtarget = YESNOsender;
+							//cg.opup_frequ.showMessageDialog(cg,cg.opup_frequ.getMessage()+" \""+YESNOsender+"\" ?");
+						} else if (msg.contains("reject your request..")) {
+							//cg.pup = new Popup(cg,"");
+							String rejector = msg.substring(msg.indexOf("\"") + 1, msg.lastIndexOf("\""));
+							cg.opup.showMessageDialog(cg, "\"" + rejector + "\" " + cg.opup.getMessage());
+						}
+						else if(msg.contains("isfriend?no")){
+							cg.opup.showMessageDialog(cg, "\"" + cg.currentChatName + "\" " +"is not your friend.");
+							continue;
+						}
+						else if(msg.contains("isfriend?yes")){
+							cg.ta_private.setText("");
+							cg.append_p("\nStart chatting with "+cg.currentChatName+'\n');
+							continue;
+						}
 					}
 					// if console mode print the message and add back the prompt
 					if(cg == null) {
 						System.out.println(msg);
 						System.out.print("> ");
 					}
-					else {
-						cg.append(msg);
+					else if(msg.contains("private|||")){
+						msg = msg.substring(10);
+						String me = username;
+						String counter;
+						String receiver = msg.substring(msg.lastIndexOf(">")+1);
+						String sender = msg.substring(msg.indexOf(" ")+1,msg.indexOf(">"));
+						counter = me.equals(receiver)? sender : receiver;
+						cg.currentChatName=counter;
+						if(!cg.startFLAG)
+						{
+							cg.ta_private.setText("Chatting with \""+counter+"\" is just started...\n");
+							cg.startFLAG=true;
+						}
+
+						cg.tf_private.setText("");
+						cg.append_p(msg.substring(0,msg.indexOf('\n'))+"\n");
 					}
-				/*	if(msg.contains("MANAGER: Do you agree to be friend with \"")){
-						YESNOFLAG=true;
-						YESNOsender = msg.substring(msg.indexOf('\"')+1,msg.lastIndexOf('\"'));
-					}
-*/
+					else
+						cg.append(msg+"\n");
+
 				}
 				catch(IOException e) {
 					display("Server has close the connection: " + e);
